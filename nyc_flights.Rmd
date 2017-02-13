@@ -1,0 +1,59 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(caret)
+library(nycflights13)
+
+```
+
+
+## Joins
+
+Unimos las tablas que vamos a usar por sus columnas correspondientes.
+
+```{r}
+nyc_flights <- flights %>% 
+  inner_join(airlines, by = 'carrier')
+
+nyc_flights <- nyc_flights %>%
+  inner_join(planes, by = 'tailnum')
+```
+
+
+Vemos que hay columnas que tenemos que renombrar ya que tienen el mismo nombre en diferentes tablas. Por ejemplo, la columna year de flights se refiere al anio en que tomo lugar el vuelo. Por otro lado, la columna year en 'planes' se refiere al anio del modelo del avion. Al unirlos quedan con el mismo nombre.
+
+
+```{r}
+nyc_flights <- nyc_flights %>%
+  rename(year = year.x, plane_name = name, plane_make = year.y, plane_type = type,
+         plane_manufacturer = manufacturer, plane_model = model)
+```
+
+
+Adicionalmente, vamos a quitar la columna de 'speed' ya que no tiene ningun valor una vez es unida a la tabla de flights.
+
+
+```{r}
+nyc_flights <- nyc_flights %>%
+  select(-speed)
+```
+
+
+## Preparacion de datos
+
+Tenemos que crear una variable binaria que los modelos van a clasificar. Para eso vamos a agregar una columna con un '1' si el vuelo se atraso y un '0' si esta a tiempo. Esto sera lo que el modelo clasificara.
+
+```{r}
+
+```
+
+
+
+
+## Modelo
+
+Para es
