@@ -6,8 +6,8 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(caret)
+library(pROC)
 library(nycflights13)
-
 ```
 
 
@@ -29,7 +29,7 @@ Vemos que hay columnas que tenemos que renombrar ya que tienen el mismo nombre e
 
 ```{r}
 nyc_flights <- nyc_flights %>%
-  rename(year = year.x, plane_name = name, plane_make = year.y, plane_type = type,
+  rename(year = year.x, carrier_name = name, plane_make = year.y, plane_type = type,
          plane_manufacturer = manufacturer, plane_model = model)
 ```
 
@@ -71,5 +71,68 @@ Train <- createDataPartition(filtered_nyc_flights$is_delayed, p = 0.8,
                               times = 1)
 training <- filtered_nyc_flights[Train, ]
 testing <- filtered_nyc_flights[-Train, ]
+```
+
+
+Ahora podemos implementar los modelos. El primero va a ser una regresion logistica para clasificacion. Este modelo clasificara si un vuelo se atrasara o no. Empezamos entrenando el modelo en el dataset que creamos para entrenamiento `training`.
+
+```{r}
+glmModel <- glm(is_delayed ~ day + month + year + carrier_name + origin +
+                dest + sched_dep_time + dep_time + distance, data = training,
+                family = binomial(link = 'logit'))
+```
+
+Con el modelo ya entrenado podemos probarlo usando el dataset de `testing`. Estos son datos nuevos que el modelo no ha visto. En base al resultado en estos nuevos datos sabremos si el modelo fue entrenado exitosamente.
+
+```{r}
+pred_glmModel <- predict(glmModel, newdata = testing, type = 'response')
+```
+
+Agregamos las predicciones al DataFrame de testing para poder hacer las comparaciones
+```{r}
+testing_preds <- cbind(testing, pred_glmModel)
+```
+
+Luego convertimos los valores, que estan en probabilidades, a valores binarios `0` y `1`. De esta forma ya podemos ver si las predicciones hacen match con los valores verdaderos que estan en el dataset de test.
+```{r}
+testing_preds <- testing_preds %>%
+  mutate(predictions = if_else(pred_glmModel >= 0.5, 1, 0))
+```
+
+
+## Confusion Matrix y ROC
+
+
+```{r}
+
+confusionMatrix(data = testing_preds$predictions, reference = testing_preds$is_delayed)
+```
+
+```{r}
+roc_glmModel <- roc(testing_preds$is_delayed, pred_glmModel)
+auc_glmModel <- auc(roc_glmModel)
+```
+
+
+## Segundo modelo
+
+Este modelo es un Boosted Generalized Linear Model. El `glmboost` realice la seleccion de variables a utilizar
+
+```{r}
+# Hay que convertir el `is_delayed` a factor para que funcione
+```
+
+
+```{r}
+fitControl <- trainControl(method = 'repeatedcv',
+                           number = 5,
+                           repeats = 10,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary)
+
+
+glmBoostModel <- train(is_delayed ~., data = training, method = 'glmboost',
+                       metric = 'ROC', trControl = fitControl, tuneLength = 5,
+                       center = TRUE, family = Binomial(link = c('logit')))
 ```
 
