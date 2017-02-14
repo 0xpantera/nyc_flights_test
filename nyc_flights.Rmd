@@ -42,18 +42,34 @@ nyc_flights <- nyc_flights %>%
   select(-speed)
 ```
 
-
-## Preparacion de datos
-
-Tenemos que crear una variable binaria que los modelos van a clasificar. Para eso vamos a agregar una columna con un '1' si el vuelo se atraso y un '0' si esta a tiempo. Esto sera lo que el modelo clasificara.
+Por ultimo vamos a limpiar los valores faltantes en la columna de arr_delay para poder hacer el calculo en base a eso.
 
 ```{r}
-
+filtered_nyc_flights <- nyc_flights %>%
+  filter(complete.cases(.))
 ```
 
 
+## Preparacion de datos
+
+Tenemos que crear una variable binaria que los modelos van a clasificar. Para eso vamos a agregar una columna `is_delayed` con un '1' si el vuelo se atraso y un '0' si esta a tiempo. Esto sera lo que el modelo clasificara. Tomaremos como un atraso cualquier vuelo que este 15 o mas minutos atrasado.
+
+```{r}
+filtered_nyc_flights <- filtered_nyc_flights %>% 
+  mutate(is_delayed = if_else(arr_delay >= 15, 1, 0))
+```
 
 
 ## Modelo
 
-Para es
+El primer modelo que vamos a usar para clasificar datos va a ser una regresion logistica. Empezamos partiendo el dataset en dos. Uno servira para entrenar y otro para examinar el modelo entrenado.
+
+```{r}
+set.seed(3456)
+Train <- createDataPartition(filtered_nyc_flights$is_delayed, p = 0.8, 
+                             list = FALSE,
+                              times = 1)
+training <- filtered_nyc_flights[Train, ]
+testing <- filtered_nyc_flights[-Train, ]
+```
+
